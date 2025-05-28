@@ -8,19 +8,16 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModelProvider
 import com.example.tetris.databinding.ActivityMainBinding
-import com.example.tetris.juego.MotorJuegoTetris
-import com.example.tetris.db.PuntuacionEntity
 import com.example.tetris.db.TetrisDatabase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.example.tetris.viewmodel.TetrisViewModel
+import com.example.tetris.viewmodel.TetrisViewModelFactory
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var motorJuego: MotorJuegoTetris
+    private lateinit var viewModel: TetrisViewModel
     private lateinit var db: TetrisDatabase
     private lateinit var botonTop10: Button
 
@@ -32,18 +29,16 @@ class MainActivity : AppCompatActivity() {
         // Inicializa la base de datos
         db = TetrisDatabase.getInstance(this)
 
-        // Inicializa el motor con valores por defecto
-        motorJuego = MotorJuegoTetris(anchoTablero = 10, altoTablero = 16)
+        // Inicializa el ViewModel con su Factory
+        val viewModelFactory = TetrisViewModelFactory(db.puntuacionDao())
+        viewModel = ViewModelProvider(this, viewModelFactory)[TetrisViewModel::class.java]
 
-        // Conecta primero el motor del juego con la vista
-        binding.vistaTableroTetris.establecerMotorJuego(motorJuego)
+        // Conecta la vista con el ViewModel
+        binding.vistaTableroTetris.establecerViewModel(viewModel)
 
-        // Ahora que el motor está conectado con la vista, configura los listeners y UI
+        // Configura los listeners y observadores
         configurarListenersDeControles()
-        configurarListenersDelMotorJuego()
-
-        // Estado inicial de los controles
-        actualizarVisibilidadControles(!motorJuego.juegoTerminado)
+        configurarObservadores()
 
         // Hacer que el botón de reiniciar siempre esté visible
         binding.botonReiniciar.visibility = View.VISIBLE
@@ -63,50 +58,43 @@ class MainActivity : AppCompatActivity() {
     private fun configurarListenersDeControles() {
         with(binding) {
             botonIzquierda.setOnClickListener {
-                if (!motorJuego.juegoTerminado) {
-                    motorJuego.moverPiezaIzquierda()
-                }
+                viewModel.moverPiezaIzquierda()
             }
 
             botonDerecha.setOnClickListener {
-                if (!motorJuego.juegoTerminado) {
-                    motorJuego.moverPiezaDerecha()
-                }
+                viewModel.moverPiezaDerecha()
             }
 
             botonRotar.setOnClickListener {
-                if (!motorJuego.juegoTerminado) {
-                    motorJuego.rotarPieza()
-                }
+                viewModel.rotarPieza()
             }
 
             botonCaidaRapida.setOnClickListener {
-                if (!motorJuego.juegoTerminado) {
-                    motorJuego.dejarCaerPiezaRapido()
-                }
+                viewModel.dejarCaerPiezaRapido()
             }
 
             botonReiniciar.setOnClickListener {
-                motorJuego.reiniciarJuego()
-                actualizarVisibilidadControles(true)
-                // No necesitamos cambiar la visibilidad del botón de reiniciar
+                viewModel.reiniciarJuego()
             }
         }
     }
 
-    private fun configurarListenersDelMotorJuego() {
-        motorJuego.alActualizarPuntuacionNivel = { puntuacion, nivel ->
-            runOnUiThread {
-                binding.textoPuntuacion.text = puntuacion.toString()
-                binding.textoNivel.text = nivel.toString()
-            }
+    private fun configurarObservadores() {
+        // Observar cambios en la puntuación
+        viewModel.puntuacion.observe(this) { puntuacion ->
+            binding.textoPuntuacion.text = puntuacion.toString()
         }
 
-        motorJuego.alTerminarJuego = { puntuacionFinal ->
-            runOnUiThread {
-                actualizarVisibilidadControles(false)
-                // Ya no necesitamos cambiar la visibilidad del botón de reiniciar
-                mostrarDialogoGameOver(puntuacionFinal)
+        // Observar cambios en el nivel
+        viewModel.nivel.observe(this) { nivel ->
+            binding.textoNivel.text = nivel.toString()
+        }
+
+        // Observar fin de juego
+        viewModel.juegoTerminado.observe(this) { juegoTerminado ->
+            actualizarVisibilidadControles(!juegoTerminado)
+            if (juegoTerminado) {
+                mostrarDialogoGameOver(viewModel.puntuacion.value ?: 0)
             }
         }
     }
@@ -129,9 +117,8 @@ class MainActivity : AppCompatActivity() {
             .setView(input)
             .setPositiveButton("Guardar") { dialog, _ ->
                 val nombre = input.text.toString().ifBlank { "Jugador" }
-                guardarPuntuacion(nombre, puntuacionFinal)
-                motorJuego.reiniciarJuego()
-                actualizarVisibilidadControles(true)
+                viewModel.guardarPuntuacion(nombre)
+                viewModel.reiniciarJuego()
                 dialog.dismiss()
             }
             .setNegativeButton("Cerrar") { dialog, _ ->
@@ -141,47 +128,24 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun guardarPuntuacion(nombre: String, puntuacion: Int) {
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    db.puntuacionDao().insertarPuntuacion(PuntuacionEntity(nombre = nombre, puntuacion = puntuacion))
-                }
-            } catch (e: Exception) {
-                Log.e("Tetris", "Error al guardar puntuación", e)
-                Toast.makeText(this@MainActivity, "Error al guardar puntuación", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
     private fun mostrarDialogoTop10() {
-        lifecycleScope.launch {
-            try {
-                val top10 = withContext(Dispatchers.IO) {
-                    db.puntuacionDao().obtenerTop10()
-                }
-                val mensaje = if (top10.isEmpty())
-                    "No hay puntuaciones aún."
-                else
-                    top10.withIndex().joinToString("\n") { "${it.index + 1}. ${it.value.nombre}: ${it.value.puntuacion}" }
+        viewModel.cargarTop10Puntuaciones()
+        viewModel.top10Puntuaciones.observe(this) { top10 ->
+            val mensaje = if (top10.isEmpty())
+                "No hay puntuaciones aún."
+            else
+                top10.withIndex().joinToString("\n") { "${it.index + 1}. ${it.value.nombre}: ${it.value.puntuacion}" }
 
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Top 10 Puntuaciones")
-                    .setMessage(mensaje)
-                    .setPositiveButton("Cerrar", null)
-                    .show()
-            } catch (e: Exception) {
-                Log.e("Tetris", "Error al obtener puntuaciones", e)
-                Toast.makeText(this@MainActivity, "Error al cargar puntuaciones", Toast.LENGTH_SHORT).show()
-            }
+            AlertDialog.Builder(this)
+                .setTitle("Top 10 Puntuaciones")
+                .setMessage(mensaje)
+                .setPositiveButton("Cerrar", null)
+                .show()
         }
     }
 
     override fun onPause() {
         super.onPause()
-        // Pausar el juego si está en curso
-        if (!motorJuego.juegoTerminado) {
-            // Aquí podrías implementar una pausa si lo deseas
-        }
+        // En un futuro se podría implementar lógica de pausa
     }
 }

@@ -9,14 +9,13 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
-import com.example.tetris.juego.MotorJuegoTetris // Importa tu motor de juego
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import com.example.tetris.juego.MotorJuegoTetris
+import com.example.tetris.viewmodel.TetrisViewModel
 
 /**
  * Vista personalizada que dibuja el tablero y las piezas del juego Tetris.
- * Incluye controles táctiles dividiendo la pantalla en dos mitades.
- *
- * Se utiliza @JvmOverloads para permitir que esta vista sea inflada desde XML
- * con diferentes constructores.
+ * Implementa el patrón MVVM observando al ViewModel para actualizar la interfaz.
  */
 class TableroView @JvmOverloads constructor(
     contexto: Context,
@@ -25,6 +24,12 @@ class TableroView @JvmOverloads constructor(
 ) : View(contexto, atributos, estiloDefectoAttr) {
 
     private var motorJuego: MotorJuegoTetris? = null
+    private var viewModel: TetrisViewModel? = null
+    private var anchoTablero: Int = 10 // Valores por defecto
+    private var altoTablero: Int = 16
+    private var celdasTablero: Array<Array<Int?>> = Array(altoTablero) { Array(anchoTablero) { null } }
+    private var piezaActual: com.example.tetris.modelo.TetrominoModelo? = null
+    private var juegoTerminado: Boolean = false
 
     // Detector de gestos para controlar los movimientos con toques
     private val gestureDetector: GestureDetector
@@ -91,20 +96,19 @@ class TableroView @JvmOverloads constructor(
 
             override fun onSingleTapUp(e: MotionEvent): Boolean {
                 // No procesamos toques si el juego ha terminado
-                val motor = motorJuego ?: return false
-                if (motor.juegoTerminado) return false
+                if (juegoTerminado) return false
 
                 // Determinar en qué mitad de la pantalla se tocó
                 val mitadPantalla = width / 2f
                 return when {
                     e.x < mitadPantalla -> {
                         // Tocar en la mitad izquierda mueve la pieza a la izquierda
-                        motor.moverPiezaIzquierda()
+                        viewModel?.moverPiezaIzquierda()
                         true
                     }
                     else -> {
                         // Tocar en la mitad derecha mueve la pieza a la derecha
-                        motor.moverPiezaDerecha()
+                        viewModel?.moverPiezaDerecha()
                         true
                     }
                 }
@@ -124,78 +128,107 @@ class TableroView @JvmOverloads constructor(
 
     /**
      * Establece la instancia del motor del juego para esta vista.
-     * La vista usará este motor para obtener los datos a dibujar.
-     * También configura el listener para que la vista se redibuje cuando el motor lo indique.
+     * Método mantenido por compatibilidad.
      */
     fun establecerMotorJuego(motor: MotorJuegoTetris) {
         this.motorJuego = motor
-        // Configura un listener: cuando el motor del juego indique que la vista debe actualizarse,
-        // se llamará a invalidate() para forzar un redibujado (onDraw).
-        this.motorJuego?.alActualizarVistaJuego = {
+        this.anchoTablero = motor.anchoTablero
+        this.altoTablero = motor.altoTablero
+
+        // Configuramos el listener para actualizar la vista cuando cambia el motor
+        motor.alActualizarVistaJuego = {
+            celdasTablero = motor.celdasTablero
+            piezaActual = motor.piezaActualParaVista
             invalidate()
         }
+
         // Solicita un redibujado inicial.
-        requestLayout() // Importante si las dimensiones dependen del motorJuego
+        requestLayout()
+        invalidate()
+    }
+
+    /**
+     * Establece el ViewModel para implementar el patrón MVVM
+     */
+    fun establecerViewModel(vm: TetrisViewModel) {
+        this.viewModel = vm
+
+        // Configuramos los observers para actualizar la vista cuando cambian los datos
+        findViewTreeLifecycleOwner()?.let { lifecycleOwner ->
+            // Observar el estado del tablero
+            vm.estadoTablero.observe(lifecycleOwner) { tablero ->
+                celdasTablero = tablero
+                invalidate()
+            }
+
+            // Observar la pieza actual
+            vm.piezaActual.observe(lifecycleOwner) { pieza ->
+                piezaActual = pieza
+                invalidate()
+            }
+
+            // Observar si el juego ha terminado
+            vm.juegoTerminado.observe(lifecycleOwner) { terminado ->
+                juegoTerminado = terminado
+                invalidate()
+            }
+        }
+
+        // Valores iniciales basados en el motor interno del ViewModel
+        this.anchoTablero = 10 // Por defecto
+        this.altoTablero = 16  // Por defecto
+
+        // Solicita un redibujado inicial.
+        requestLayout()
         invalidate()
     }
 
     /**
      * Se llama cuando el tamaño de esta vista ha cambiado.
-     * Es un buen lugar para calcular dimensiones como el tamaño de la celda,
-     * ya que aquí se conocen el ancho (w) y alto (h) disponibles para la vista.
      */
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
 
-        motorJuego?.let { motor ->
-            // Calcula el tamaño de celda basado en el ancho disponible y el número de columnas.
-            // Intenta que el tablero ocupe la mayor parte del ancho posible.
-            val anchoDisponibleParaTablero = w * 0.95f // Usar 95% del ancho para el tablero
-            tamanoCelda = anchoDisponibleParaTablero / motor.anchoTablero
+        // Calcula el tamaño de celda basado en el ancho disponible y el número de columnas.
+        val anchoDisponibleParaTablero = w * 0.95f // Usar 95% del ancho para el tablero
+        tamanoCelda = anchoDisponibleParaTablero / anchoTablero
 
-            // Calcula el alto total que ocupará el tablero.
-            val altoTotalTablero = tamanoCelda * motor.altoTablero
+        // Calcula el alto total que ocupará el tablero.
+        val altoTotalTablero = tamanoCelda * altoTablero
 
-            // Calcula los márgenes para centrar el tablero.
-            margenIzquierdoTablero = (w - (tamanoCelda * motor.anchoTablero)) / 2f
-            margenSuperiorTablero = (h - altoTotalTablero) / 2f
+        // Calcula los márgenes para centrar el tablero.
+        margenIzquierdoTablero = (w - (tamanoCelda * anchoTablero)) / 2f
+        margenSuperiorTablero = (h - altoTotalTablero) / 2f
 
-            // Asegurarse de que el tablero no se dibuje fuera de la pantalla si es muy alto.
-            if (margenSuperiorTablero < 0) {
-                margenSuperiorTablero = 20f // Un pequeño margen superior si no cabe centrado.
-            }
-
-            // Ajustar tamaño del texto de Game Over relativo al tamaño de celda
-            pinturaTextoGameOver.textSize = tamanoCelda * 2.2f
-            pinturaSubtextoGameOver.textSize = tamanoCelda * 1.2f
+        // Asegurarse de que el tablero no se dibuje fuera de la pantalla si es muy alto.
+        if (margenSuperiorTablero < 0) {
+            margenSuperiorTablero = 20f // Un pequeño margen superior si no cabe centrado.
         }
+
+        // Ajustar tamaño del texto de Game Over relativo al tamaño de celda
+        pinturaTextoGameOver.textSize = tamanoCelda * 2.2f
+        pinturaSubtextoGameOver.textSize = tamanoCelda * 1.2f
     }
 
     /**
-     * El corazón del dibujado. Se llama cada vez que la vista necesita redibujarse
-     * (por ejemplo, después de llamar a invalidate()).
-     *
-     * @param canvas El Canvas sobre el cual dibujar.
+     * El corazón del dibujado. Se llama cada vez que la vista necesita redibujarse.
      */
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
-        val motor = motorJuego ?: return // Si no hay motor, no hay nada que dibujar.
 
         // 1. Dibuja el fondo del tablero de juego.
         val rectFondoTablero = RectF(
             margenIzquierdoTablero,
             margenSuperiorTablero,
-            margenIzquierdoTablero + motor.anchoTablero * tamanoCelda,
-            margenSuperiorTablero + motor.altoTablero * tamanoCelda
+            margenIzquierdoTablero + anchoTablero * tamanoCelda,
+            margenSuperiorTablero + altoTablero * tamanoCelda
         )
         canvas.drawRect(rectFondoTablero, pinturaFondoTablero)
 
         // 2. Dibuja las piezas ya asentadas en el tablero.
-        val celdas = motor.celdasTablero
-        for (fila in 0 until motor.altoTablero) {
-            for (columna in 0 until motor.anchoTablero) {
-                celdas[fila][columna]?.let { colorBloque ->
+        for (fila in 0 until altoTablero) {
+            for (columna in 0 until anchoTablero) {
+                celdasTablero[fila][columna]?.let { colorBloque ->
                     // Si la celda no es null, contiene el color de un bloque asentado.
                     dibujarBloque(canvas, columna, fila, colorBloque)
                 }
@@ -203,7 +236,7 @@ class TableroView @JvmOverloads constructor(
         }
 
         // 3. Dibuja la pieza actual que el jugador está controlando.
-        motor.piezaActualParaVista?.let { pieza ->
+        piezaActual?.let { pieza ->
             // Itera sobre los bloques de la pieza actual.
             pieza.obtenerCoordenadasAbsolutasDeBloques().forEach { puntoBloque ->
                 // Solo dibujar bloques que estén dentro de la parte visible vertical del tablero.
@@ -215,14 +248,14 @@ class TableroView @JvmOverloads constructor(
 
         // 4. Dibuja las líneas de la cuadrícula sobre el tablero
         // Dibuja líneas verticales
-        for (i in 0..motor.anchoTablero) {
+        for (i in 0..anchoTablero) {
             val xLinea = margenIzquierdoTablero + i * tamanoCelda
-            canvas.drawLine(xLinea, margenSuperiorTablero, xLinea, margenSuperiorTablero + motor.altoTablero * tamanoCelda, pinturaLineasCuadricula)
+            canvas.drawLine(xLinea, margenSuperiorTablero, xLinea, margenSuperiorTablero + altoTablero * tamanoCelda, pinturaLineasCuadricula)
         }
         // Dibuja líneas horizontales
-        for (i in 0..motor.altoTablero) {
+        for (i in 0..altoTablero) {
             val yLinea = margenSuperiorTablero + i * tamanoCelda
-            canvas.drawLine(margenIzquierdoTablero, yLinea, margenIzquierdoTablero + motor.anchoTablero * tamanoCelda, yLinea, pinturaLineasCuadricula)
+            canvas.drawLine(margenIzquierdoTablero, yLinea, margenIzquierdoTablero + anchoTablero * tamanoCelda, yLinea, pinturaLineasCuadricula)
         }
 
         // 5. Dibuja una línea vertical en el centro para indicar la división de controles
@@ -231,12 +264,12 @@ class TableroView @JvmOverloads constructor(
             mitadPantalla,
             margenSuperiorTablero,
             mitadPantalla,
-            margenSuperiorTablero + motor.altoTablero * tamanoCelda,
+            margenSuperiorTablero + altoTablero * tamanoCelda,
             pinturaLineaDivisoria
         )
 
         // 6. Si el juego ha terminado, dibuja el mensaje de "Game Over".
-        if (motor.juegoTerminado) {
+        if (juegoTerminado) {
             dibujarMensajeGameOver(canvas)
         }
     }
@@ -277,7 +310,7 @@ class TableroView @JvmOverloads constructor(
         }
         canvas.drawRect(0f, centroY - (tamanoCelda*2), width.toFloat(), centroY + (tamanoCelda*2), pinturaFondoMsg)
 
-        // Solo mostramos el mensaje de Game Over, eliminamos el texto "Pulsa Reiniciar"
+        // Solo mostramos el mensaje de Game Over
         canvas.drawText("GAME OVER", centroX, centroY, pinturaTextoGameOver)
     }
 }
