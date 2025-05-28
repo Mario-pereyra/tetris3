@@ -1,5 +1,6 @@
 package com.example.tetris.vista
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -12,6 +13,7 @@ import android.view.View
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.example.tetris.juego.MotorJuegoTetris
 import com.example.tetris.viewmodel.TetrisViewModel
+import androidx.core.graphics.toColorInt
 
 /**
  * Vista personalizada que dibuja el tablero y las piezas del juego Tetris.
@@ -43,7 +45,7 @@ class TableroView @JvmOverloads constructor(
 
     // Paint para las líneas de la cuadrícula (opcional)
     private val pinturaLineasCuadricula = Paint().apply {
-        color = Color.parseColor("#555555") // Un gris más claro para las líneas
+        color = "#555555".toColorInt() // Un gris más claro para las líneas
         style = Paint.Style.STROKE
         strokeWidth = 1f // Grosor fino para las líneas
     }
@@ -75,7 +77,7 @@ class TableroView @JvmOverloads constructor(
 
     // Paint para las líneas divisorias de control (opcional)
     private val pinturaLineaDivisoria = Paint().apply {
-        color = Color.parseColor("#44FFFFFF") // Blanco semitransparente
+        color = "#44FFFFFF".toColorInt() // Blanco semitransparente
         style = Paint.Style.STROKE
         strokeWidth = 2f
     }
@@ -122,6 +124,7 @@ class TableroView @JvmOverloads constructor(
     /**
      * Procesa los eventos táctiles y los delega al detector de gestos
      */
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event)
     }

@@ -2,11 +2,8 @@ package com.example.tetris
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.ViewModelProvider
 import com.example.tetris.databinding.ActivityMainBinding
@@ -19,7 +16,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: TetrisViewModel
     private lateinit var db: TetrisDatabase
-    private lateinit var botonTop10: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,17 +38,6 @@ class MainActivity : AppCompatActivity() {
 
         // Hacer que el botón de reiniciar siempre esté visible
         binding.botonReiniciar.visibility = View.VISIBLE
-
-        // Agrega el botón Top 10 con diseño consistente
-        botonTop10 = Button(this).apply {
-            text = "Top 10"
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            setOnClickListener { mostrarDialogoTop10() }
-        }
-        binding.panelInformacion.addView(botonTop10)
     }
 
     private fun configurarListenersDeControles() {
@@ -75,6 +60,10 @@ class MainActivity : AppCompatActivity() {
 
             botonReiniciar.setOnClickListener {
                 viewModel.reiniciarJuego()
+            }
+
+            botonTop10.setOnClickListener {
+                mostrarDialogoTop10()
             }
         }
     }
@@ -134,7 +123,8 @@ class MainActivity : AppCompatActivity() {
             val mensaje = if (top10.isEmpty())
                 "No hay puntuaciones aún."
             else
-                top10.withIndex().joinToString("\n") { "${it.index + 1}. ${it.value.nombre}: ${it.value.puntuacion}" }
+                top10.withIndex()
+                    .joinToString("\n") { "${it.index + 1}. ${it.value.nombre}: ${it.value.puntuacion}" }
 
             AlertDialog.Builder(this)
                 .setTitle("Top 10 Puntuaciones")
@@ -142,10 +132,5 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton("Cerrar", null)
                 .show()
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // En un futuro se podría implementar lógica de pausa
     }
 }

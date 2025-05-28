@@ -13,55 +13,81 @@
         android:id="@+id/panelInformacion"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
+        android:layout_marginTop="28dp"
         android:background="#333333"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:scrollbars="horizontal"
+        android:scrollHorizontally="true"
         app:layout_constraintEnd_toEndOf="parent"
-        android:gravity="center_horizontal">
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <Button
             android:id="@+id/botonReiniciar"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="4dp"
+            android:minWidth="80dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:text="Reiniciar"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            android:textSize="12sp"
+            android:visibility="visible" />
 
-        <TextView
+        <Button
+            android:id="@+id/botonTop10"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Puntuación: "
-            android:textColor="@android:color/white"
-            android:textSize="18sp" />
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:minWidth="80dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="Top 10"
+            android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/textoPuntuacion"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="0"
-            android:textColor="@android:color/holo_orange_light"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginEnd="24dp"/>
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Nivel: "
-            android:textColor="@android:color/white"
-            android:textSize="18sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Puntuación: "
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/textoNivel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1"
-            android:textColor="@android:color/holo_green_light"
-            android:textSize="18sp"
-            android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/textoPuntuacion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:text="0"
+                android:textColor="@android:color/holo_orange_light"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nivel: "
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/textoNivel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1"
+                android:textColor="@android:color/holo_green_light"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
     <com.example.tetris.vista.TableroView
@@ -128,14 +154,15 @@
         android:id="@+id/botonCaidaRapida"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Abajo (Caída Rápida)"
-        app:layout_constraintTop_toBottomOf="@id/filaControlesSuperiores"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
         android:layout_marginStart="16dp"
+        android:layout_marginTop="2dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="26dp"
+        android:text="Abajo (Caída Rápida)"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/filaControlesSuperiores" />
 </androidx.constraintlayout.widget.ConstraintLayout>
 

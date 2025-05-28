@@ -30,8 +30,8 @@ class MotorJuegoTetris(
 
     // --- CONFIGURACIÓN DEL JUEGO ---
     private val puntosPorLineaSimple: Int = 10
-    private val umbralPuntosParaNivelInicial: Int = 5000 // Según regla del usuario
-    private val decrementoDelayCaidaPorNivel: Long = 75L // Milisegundos
+    private val umbralPuntosParaNivelInicial: Int = 100// Según regla del usuario
+    private val decrementoDelayCaidaPorNivel: Long = 200L // Milisegundos
     private val delayCaidaMinimo: Long = 100L           // Milisegundos
     private var delayCaidaActualMs: Long = 800L        // Milisegundos
 
