@@ -12,49 +12,42 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * ViewModel para el juego de Tetris siguiendo el patrón MVVM.
- * Actúa como intermediario entre la vista (Activity) y el modelo (motor del juego).
- */
+
 class TetrisViewModel(private val puntuacionDao: PuntuacionDao) : ViewModel() {
 
-    // Motor del juego (parte del modelo)
+
     private val motorJuego: MotorJuegoTetris = MotorJuegoTetris(anchoTablero = 10, altoTablero = 16)
 
-    // Estado observable del tablero
     private val _estadoTablero = MutableLiveData<Array<Array<Int?>>>()
     val estadoTablero: LiveData<Array<Array<Int?>>> = _estadoTablero
 
-    // Pieza actual observable
     private val _piezaActual = MutableLiveData<TetrominoModelo?>()
     val piezaActual: LiveData<TetrominoModelo?> = _piezaActual
 
-    // Puntuación y nivel actuales
+
     private val _puntuacion = MutableLiveData(0)
     val puntuacion: LiveData<Int> = _puntuacion
 
     private val _nivel = MutableLiveData(1)
     val nivel: LiveData<Int> = _nivel
 
-    // Estado del juego
     private val _juegoTerminado = MutableLiveData(false)
     val juegoTerminado: LiveData<Boolean> = _juegoTerminado
 
-    // Top 10 puntuaciones
     private val _top10Puntuaciones = MutableLiveData<List<PuntuacionEntity>>()
     val top10Puntuaciones: LiveData<List<PuntuacionEntity>> = _top10Puntuaciones
 
     init {
-        // Configurar listeners del motor de juego
+
         configurarListenersMotor()
 
-        // Iniciar el juego
+
         reiniciarJuego()
     }
 
     private fun configurarListenersMotor() {
         motorJuego.alActualizarVistaJuego = {
-            // Actualizar estados observables cuando cambia la vista del juego
+
             _estadoTablero.postValue(motorJuego.celdasTablero)
             _piezaActual.postValue(motorJuego.piezaActualParaVista)
         }
@@ -69,7 +62,7 @@ class TetrisViewModel(private val puntuacionDao: PuntuacionDao) : ViewModel() {
         }
     }
 
-    // --- ACCIONES DEL JUEGO ---
+
 
     fun moverPiezaIzquierda() {
         motorJuego.moverPiezaIzquierda()
@@ -92,7 +85,7 @@ class TetrisViewModel(private val puntuacionDao: PuntuacionDao) : ViewModel() {
         _juegoTerminado.postValue(false)
     }
 
-    // --- OPERACIONES DE BASE DE DATOS ---
+
 
     fun guardarPuntuacion(nombre: String) {
         viewModelScope.launch {

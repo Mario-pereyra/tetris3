@@ -22,21 +22,16 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Inicializa la base de datos
         db = TetrisDatabase.getInstance(this)
 
-        // Inicializa el ViewModel con su Factory
         val viewModelFactory = TetrisViewModelFactory(db.puntuacionDao())
         viewModel = ViewModelProvider(this, viewModelFactory)[TetrisViewModel::class.java]
 
-        // Conecta la vista con el ViewModel
         binding.vistaTableroTetris.establecerViewModel(viewModel)
 
-        // Configura los listeners y observadores
         configurarListenersDeControles()
         configurarObservadores()
 
-        // Hacer que el botón de reiniciar siempre esté visible
         binding.botonReiniciar.visibility = View.VISIBLE
     }
 
@@ -69,17 +64,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configurarObservadores() {
-        // Observar cambios en la puntuación
         viewModel.puntuacion.observe(this) { puntuacion ->
             binding.textoPuntuacion.text = puntuacion.toString()
         }
 
-        // Observar cambios en el nivel
         viewModel.nivel.observe(this) { nivel ->
             binding.textoNivel.text = nivel.toString()
         }
 
-        // Observar fin de juego
         viewModel.juegoTerminado.observe(this) { juegoTerminado ->
             actualizarVisibilidadControles(!juegoTerminado)
             if (juegoTerminado) {
